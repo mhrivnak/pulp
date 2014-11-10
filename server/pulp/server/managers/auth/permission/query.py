@@ -14,10 +14,9 @@
 """
 Contains permissions query classes
 """
-from gettext import gettext as _
+from logging import getLogger
 
 from pulp.server.db.model.auth import Permission
-from logging import getLogger
 
 # -- constants ----------------------------------------------------------------
 
@@ -52,8 +51,5 @@ class PermissionQueryManager(object):
         @return: serialized data describing the permission
         @rtype:  dict or None
         """
-        permission = Permission.get_collection().find_one({'resource' : resource_uri})
+        permission = Permission.get_collection().find_one({'resource': resource_uri})
         return permission
-
-
-    
