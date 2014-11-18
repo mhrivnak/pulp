@@ -394,6 +394,8 @@ A collection of components that are common between the pulp server and client.
 
 %package -n pulp-doc
 Summary: Pulp documentation
+Group: Development/Languages
+BuildRequires python-sphinx
 
 %description -n pulp-doc
 documentation for pulp
