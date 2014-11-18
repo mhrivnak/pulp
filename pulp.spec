@@ -82,8 +82,9 @@ sed -i "s/policy_module(pulp-celery, [0-9]*.[0-9]*.[0-9]*)/policy_module(pulp-ce
 cd -
 %endif
 
-# build man pages
+# build man pages and HTML docs
 pushd docs
+make html
 make man
 popd docs
 
@@ -387,6 +388,19 @@ A collection of components that are common between the pulp server and client.
 %{python_sitelib}/%{name}/common/
 %{python_sitelib}/pulp_common*.egg-info
 %doc README LICENSE COPYRIGHT
+
+
+# ---- Docs --------------------------------------------------------------------
+
+%package -n pulp-doc
+Summary: Pulp documentation
+
+%description -n pulp-doc
+documentation for pulp
+
+%files -n pulp-doc
+%defattr(-,root,root,-)
+%doc LICENSE COPYRIGHT docs/_build/html
 
 
 # ---- Client Bindings ---------------------------------------------------------
