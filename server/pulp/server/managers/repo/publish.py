@@ -363,8 +363,8 @@ class RepoPublishManager(object):
         :type distributor_id: str
         :param overrides: dictionary of options to pass to the publish manager
         :type overrides: dict or None
-        :return: list of call requests
-        :rtype: list
+        :return: task result object
+        :rtype: pulp.server.async.tasks.TaskResult
         """
         kwargs = {
             'repo_id': repo_id,

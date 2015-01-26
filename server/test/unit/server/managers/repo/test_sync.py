@@ -7,6 +7,7 @@ import mock
 
 from .... import base
 from pulp.common import dateutils, constants
+from pulp.common.tags import resource_tag, RESOURCE_REPOSITORY_TYPE, action_tag
 from pulp.devel import mock_plugins
 from pulp.plugins.model import SyncReport
 from pulp.server.async import tasks
@@ -70,6 +71,19 @@ class RepoSyncManagerTests(base.PulpServerTests):
 
         # Reset the state of the mock's tracker variables
         MockRepoPublishManager.reset()
+
+    @mock.patch('pulp.server.managers.repo.sync.sync.apply_async_with_reservation')
+    def test_queue_sync(self, mock_sync_task):
+        repo_id = 'foo'
+        overrides = {'baz': 1}
+        self.sync_manager.queue_sync_with_auto_publish(repo_id, overrides)
+        kwargs = {
+            'repo_id': repo_id,
+            'sync_config_override': overrides
+        }
+        tags = [resource_tag(RESOURCE_REPOSITORY_TYPE, repo_id), action_tag('sync')]
+        mock_sync_task.assert_called_with(RESOURCE_REPOSITORY_TYPE, repo_id, tags=tags,
+                                          kwargs=kwargs)
 
     @mock.patch('pulp.server.managers.event.fire.EventFireManager.fire_repo_sync_started')
     @mock.patch('pulp.server.managers.event.fire.EventFireManager.fire_repo_sync_finished')
