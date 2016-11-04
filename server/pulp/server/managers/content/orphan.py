@@ -165,12 +165,17 @@ class OrphanManager(object):
         """
         Delete all orphaned content units.
         """
-
+        ret = {}
         for content_type_id in content_types_db.all_type_ids():
-            OrphanManager.delete_orphans_by_type(content_type_id)
+            count = OrphanManager.delete_orphans_by_type(content_type_id)
+            if count > 0:
+                ret[content_type_id] = count
 
         for content_type_id in plugin_api.list_unit_models():
-            OrphanManager.delete_orphan_content_units_by_type(content_type_id)
+            count = OrphanManager.delete_orphan_content_units_by_type(content_type_id)
+            if count > 0:
+                ret[content_type_id] = count
+        return ret
 
     @staticmethod
     def delete_orphans_by_id(content_unit_list):
@@ -215,6 +220,7 @@ class OrphanManager(object):
 
         content_units_collection = content_types_db.type_units_collection(content_type_id)
 
+        count = 0
         for content_unit in OrphanManager.generate_orphans_by_type(content_type_id,
                                                                    fields=['_id', '_storage_path']):
 
@@ -230,6 +236,8 @@ class OrphanManager(object):
             storage_path = content_unit.get('_storage_path', None)
             if storage_path is not None:
                 OrphanManager.delete_orphaned_file(storage_path)
+            count += 1
+        return count
 
     @staticmethod
     def delete_orphan_content_units_by_type(type_id, content_unit_ids=None):
@@ -255,6 +263,8 @@ class OrphanManager(object):
         else:
             content_units = content_model.objects.only('id', '_storage_path')
 
+        count = 0
+
         # Paginate the content units
         for units_group in plugin_misc.paginate(content_units):
             # Build the list of ids to search for an easier way to access units in the group by id
@@ -279,6 +289,9 @@ class OrphanManager(object):
                 unit_to_delete.delete()
                 if unit_to_delete._storage_path:
                     OrphanManager.delete_orphaned_file(unit_to_delete._storage_path)
+                count += 1
+
+        return count
 
     @staticmethod
     def delete_orphaned_file(path):
@@ -381,6 +394,6 @@ class OrphanManager(object):
             _logger.error(_('Delete path: %(p)s failed: %(m)s'), {'p': path, 'm': str(e)})
 
 
-delete_all_orphans = task(OrphanManager.delete_all_orphans, base=Task, ignore_result=True)
+delete_all_orphans = task(OrphanManager.delete_all_orphans, base=Task)
 delete_orphans_by_id = task(OrphanManager.delete_orphans_by_id, base=Task, ignore_result=True)
 delete_orphans_by_type = task(OrphanManager.delete_orphans_by_type, base=Task, ignore_result=True)
