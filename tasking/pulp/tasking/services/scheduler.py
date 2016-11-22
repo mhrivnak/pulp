@@ -1,4 +1,5 @@
 import logging
+import os
 import platform
 import threading
 import time
@@ -9,9 +10,12 @@ from celery import beat
 from django.utils import timezone
 from django.db import IntegrityError
 
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", 'pulp.app.settings')
+
+from pulp.tasking.celery_app import celery as app
+
 from pulp.app.models.task import TaskLock, Worker
 from pulp.tasking.services import worker_watcher
-from pulp.tasking.celery_instance import celery as app
 from pulp.tasking.constants import TASKING_CONSTANTS as constants
 
 

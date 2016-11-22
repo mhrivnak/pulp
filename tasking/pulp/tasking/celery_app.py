@@ -17,10 +17,6 @@ from django.db.utils import IntegrityError
 # This import is here so that Celery will find our application instance
 from pulp.tasking.celery_instance import celery  # noqa
 
-from pulp.app.models.task import TaskLock, Worker
-from pulp.tasking.services.worker_watcher import delete_worker
-from pulp.tasking.services import storage
-from pulp.tasking.constants import TASKING_CONSTANTS
 
 
 _logger = logging.getLogger(__name__)
@@ -67,6 +63,11 @@ def initialize_worker(sender, instance, **kwargs):
     :param kwargs:   Other params (unused)
     :type  kwargs:   dict
     """
+    from pulp.app.models.task import TaskLock, Worker
+    from pulp.tasking.services.worker_watcher import delete_worker
+    from pulp.tasking.services import storage
+    from pulp.tasking.constants import TASKING_CONSTANTS
+
     instance.autodiscover_tasks()
 
     # Delete any potential old state
