@@ -67,6 +67,8 @@ def initialize_worker(sender, instance, **kwargs):
     :param kwargs:   Other params (unused)
     :type  kwargs:   dict
     """
+    instance.autodiscover_tasks()
+
     # Delete any potential old state
     delete_worker(sender, normal_shutdown=True)
 
