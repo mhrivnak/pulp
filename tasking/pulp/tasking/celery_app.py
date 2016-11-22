@@ -11,24 +11,22 @@ import sys
 import time
 from gettext import gettext as _
 
-from celery.signals import celeryd_after_setup
+from celery.signals import worker_init
 from django.db.utils import IntegrityError
-
-from pulp.app.models.task import TaskLock, Worker
-from pulp.tasking import delete_worker, storage
-from pulp.tasking.constants import TASKING_CONSTANTS
 
 # This import is here so that Celery will find our application instance
 from pulp.tasking.celery_instance import celery  # noqa
 
-# This import is here so Celery will discover all tasks
-import pulp.tasking.registry  # noqa
+from pulp.app.models.task import TaskLock, Worker
+from pulp.tasking.services.worker_watcher import delete_worker
+from pulp.tasking.services import storage
+from pulp.tasking.constants import TASKING_CONSTANTS
 
 
 _logger = logging.getLogger(__name__)
 
 
-@celeryd_after_setup.connect
+@worker_init.connect
 def initialize_worker(sender, instance, **kwargs):
     """
     This function performs all the necessary initialization of the Celery worker.
