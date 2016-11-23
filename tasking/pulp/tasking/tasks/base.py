@@ -220,7 +220,7 @@ class UserFacingTask(PulpTask):
         # Create a new task status with the task id and tags.
         with transaction.atomic():
             # FIXME async_result is undefined
-            task_status = TaskStatus.objects.create(pk=async_result.id, state=TaskStatus.WAITING,
+            task_status = TaskStatus.objects.create(pk=inner_task_id, state=TaskStatus.WAITING,
                                                     group=group_id, **parent_arg)
             for tag in tag_list:
                 task_status.tags.create(name=tag)
@@ -339,7 +339,7 @@ class UserFacingTask(PulpTask):
         parent_arg = {}
         current_task_id = get_current_task_id()
         if current_task_id is not None:
-            current_task_obj = TaskStatus.objects.get(current_task_id)
+            current_task_obj = TaskStatus.objects.get(pk=current_task_id)
             parent_arg['parent'] = current_task_obj
         return parent_arg
 
