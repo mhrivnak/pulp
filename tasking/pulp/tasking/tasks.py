@@ -219,7 +219,6 @@ class UserFacingTask(PulpTask):
 
         # Create a new task status with the task id and tags.
         with transaction.atomic():
-            # FIXME async_result is undefined
             task_status = TaskStatus.objects.create(pk=inner_task_id, state=TaskStatus.WAITING,
                                                     group=group_id, **parent_arg)
             for tag in tag_list:

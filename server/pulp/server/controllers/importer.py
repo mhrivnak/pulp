@@ -12,7 +12,7 @@ from pulp.plugins.loader import api as plugin_api
 from pulp.server import exceptions
 from pulp.server.db import model
 from pulp.server.managers import factory as manager_factory
-from pulp.tasking import UserFacingTask
+from pulp.tasking.tasks import UserFacingTask
 
 
 _logger = logging.getLogger(__name__)
