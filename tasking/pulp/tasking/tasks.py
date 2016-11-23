@@ -74,7 +74,7 @@ def _queue_reserved_task(name, task_id, resource_id, inner_args, inner_kwargs):
             break
 
         try:
-            worker = _get_unreserved_worker()
+            worker = Worker.objects.get_unreserved_worker()
         except Worker.DoesNotExist:
             pass
         else:
@@ -95,30 +95,6 @@ def _queue_reserved_task(name, task_id, resource_id, inner_args, inner_kwargs):
     finally:
         _release_resource.apply_async((task_id, ), routing_key=worker.name,
                                       exchange=DEDICATED_QUEUE_EXCHANGE)
-
-
-def _get_unreserved_worker():
-    """
-    Find an unreserved Worker
-
-    Return the Worker instance that has no ReservedResource associated with it. If all workers have
-    ReservedResource relationships a Worker.DoesNotExist pulp.app.model.Worker exception is
-    raised.
-
-    This function also provides randomization for worker selection.
-
-    TODO: maybe this would be better as a method on the Worker model's manager.
-
-    :raises Worker.DoesNotExist: If all workers have ReservedResource entries associated with them.
-
-    :returns:          The Worker instance that has no reserved_resource
-                       entries associated with it.
-    :rtype:            pulp.app.model.Worker
-    """
-    free_workers_qs = Worker.objects.annotate(Count('reservations')).filter(reservations__count=0)
-    if free_workers_qs.count() == 0:
-        raise Worker.DoesNotExist()
-    return free_workers_qs.order_by('?').first()
 
 
 @task(base=PulpTask)

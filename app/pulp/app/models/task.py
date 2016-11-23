@@ -35,6 +35,29 @@ class ReservedResource(Model):
     worker = models.ForeignKey("Worker", on_delete=models.CASCADE, related_name="reservations")
 
 
+class WorkerManager(models.Manager):
+    def get_unreserved_worker(self):
+        """
+        Find an unreserved Worker
+
+        Return the Worker instance that has no ReservedResource associated with it. If all workers have
+        ReservedResource relationships a Worker.DoesNotExist pulp.app.model.Worker exception is
+        raised.
+
+        This function also provides randomization for worker selection.
+
+        :raises Worker.DoesNotExist: If all workers have ReservedResource entries associated with them.
+
+        :returns:          The Worker instance that has no reserved_resource
+                           entries associated with it.
+        :rtype:            pulp.app.model.Worker
+        """
+        free_workers_qs = self.annotate(models.Count('reservations')).filter(reservations__count=0)
+        if free_workers_qs.count() == 0:
+            raise self.model.DoesNotExist()
+        return free_workers_qs.order_by('?').first()
+
+
 class Worker(Model):
     """
     Represents a worker
@@ -44,6 +67,8 @@ class Worker(Model):
         name (models.TextField): The name of the worker, in the format "worker_type@hostname"
         last_heartbeat (models.DateTimeField): A timestamp of this worker's last heartbeat
     """
+    objects = WorkerManager()
+
     name = models.TextField(db_index=True, unique=True)
     last_heartbeat = models.DateTimeField(auto_now=True)
 
