@@ -1,10 +1,9 @@
 import logging
 import time
 import uuid
-from contextlib import suppress
 from gettext import gettext as _
 
-from celery import Task as CeleryTask, current_task, task
+from celery import Task as CeleryTask, task
 from celery.app import control
 from celery.result import AsyncResult
 from django.db import transaction
@@ -13,6 +12,7 @@ from django.db.models import Count
 from pulp.app.models import ReservedResource, Task as TaskStatus, TaskLock, Worker
 from pulp.common import TASK_FINAL_STATES, TASK_INCOMPLETE_STATES, TASK_STATES
 from pulp.exceptions import MissingResource, PulpException
+from pulp.tasking import util
 from pulp.tasking.services import storage
 from pulp.tasking.celery_instance import celery
 from pulp.tasking.celery_instance import DEDICATED_QUEUE_EXCHANGE, RESOURCE_MANAGER_QUEUE
@@ -337,50 +337,10 @@ class UserFacingTask(PulpTask):
     def _get_parent_arg(self):
         """Return a dictionary with the parent set if running inside of a Task"""
         parent_arg = {}
-        current_task_id = get_current_task_id()
+        current_task_id = util.get_current_task_id()
         if current_task_id is not None:
             current_task_obj = TaskStatus.objects.get(pk=current_task_id)
             parent_arg['parent'] = current_task_obj
         return parent_arg
 
 
-def cancel(task_id):
-    """
-    Cancel the task that is represented by the given task_id. This method cancels only the task
-    with given task_id, not the spawned tasks. This also updates task's state to 'canceled'.
-
-    :param task_id: The ID of the task you wish to cancel
-    :type  task_id: basestring
-
-    :raises MissingResource: if a task with given task_id does not exist
-    """
-    try:
-        task_status = TaskStatus.objects.get(pk=task_id)
-    except TaskStatus.DoesNotExist:
-        raise MissingResource(task_id)
-
-    if task_status.state in TASK_FINAL_STATES:
-        # If the task is already done, just stop
-        msg = _('Task [%(task_id)s] already in a completed state: %(state)s')
-        _logger.info(msg % {'task_id': task_id, 'state': task_status.state})
-        return
-
-    celery_controller.revoke(task_id, terminate=True)
-    task_status.state = TaskStatus.CANCELED
-    task_status.save()
-
-    msg = _('Task canceled: %(task_id)s.')
-    msg = msg % {'task_id': task_id}
-    _logger.info(msg)
-
-
-def get_current_task_id():
-    """"
-    Get the current task id from celery. If this is called outside of a running
-    celery task it will return None
-
-    :return: The ID of the currently running celery task or None if not in a task
-    :rtype: str
-    """
-    with suppress(AttributeError):
-        return current_task.request.id

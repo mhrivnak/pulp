@@ -20,7 +20,7 @@ import logging
 from pulp.app.models import Worker, TaskLock
 from pulp.common import TASK_INCOMPLETE_STATES
 from pulp.tasking.constants import TASKING_CONSTANTS
-from pulp.tasking.tasks import cancel
+from pulp.tasking.util import cancel
 
 _logger = logging.getLogger(__name__)
 
