@@ -1,1 +1,2 @@
-from pulp.app.tasks.repository import delete_publisher  # noqa
+from pulp.app.tasks import repository  # noqa
+

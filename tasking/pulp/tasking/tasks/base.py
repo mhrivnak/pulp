@@ -1,6 +1,5 @@
 import logging
 import time
-import traceback
 import uuid
 from contextlib import suppress
 from gettext import gettext as _
@@ -17,7 +16,7 @@ from pulp.exceptions import MissingResource, PulpException
 from pulp.tasking.services import storage
 from pulp.tasking.celery_instance import celery
 from pulp.tasking.celery_instance import DEDICATED_QUEUE_EXCHANGE, RESOURCE_MANAGER_QUEUE
-from pulp.tasking.constants import TASKING_CONSTANTS
+
 
 celery_controller = control.Control(app=celery)
 _logger = logging.getLogger(__name__)
@@ -54,10 +53,10 @@ def _queue_reserved_task(name, task_id, resource_id, inner_args, inner_kwargs):
 
     :param name:          The name of the task to be called
     :type name:           basestring
-    :param inner_task_id: The UUID to be set on the task being called. By providing
+    :param task_id:       The UUID to be set on the task being called. By providing
                           the UUID, the caller can have an asynchronous reference to the inner task
                           that will be dispatched.
-    :type inner_task_id:  basestring
+    :type task_id:        basestring
     :param resource_id:   The name of the resource you wish to reserve for your task. The system
                           will ensure that no other tasks that want that same reservation will run
                           concurrently with yours.
@@ -220,6 +219,7 @@ class UserFacingTask(PulpTask):
 
         # Create a new task status with the task id and tags.
         with transaction.atomic():
+            # FIXME async_result is undefined
             task_status = TaskStatus.objects.create(pk=async_result.id, state=TaskStatus.WAITING,
                                                     group=group_id, **parent_arg)
             for tag in tag_list:

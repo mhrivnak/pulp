@@ -12,6 +12,9 @@ from django.db import IntegrityError
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", 'pulp.app.settings')
 
+# This import is here so that Celery will find our application instance. It's important that other
+# pulp and django code not get used until after the celery app is instantiated and does its "fixup"
+# of django.
 from pulp.tasking.celery_app import celery as app
 
 from pulp.app.models.task import TaskLock, Worker
@@ -20,7 +23,7 @@ from pulp.tasking.constants import TASKING_CONSTANTS as constants
 
 
 # The import below is not used in this module, but it needs to be kept here. This module is the
-# first and only Pulp module to be imported by celerybeat, and by importing pulp.server.logs, it
+# first and only Pulp module to be imported by celerybeat, and by importing pulp.app.logs, it
 # configures the celerybeat logging to log as Pulp does.
 import pulp.app.logs  # noqa
 
