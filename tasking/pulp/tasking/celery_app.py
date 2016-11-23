@@ -11,10 +11,12 @@ import sys
 import time
 from gettext import gettext as _
 
-from celery import signals
+from celery.signals import celeryd_after_setup
 from django.db.utils import IntegrityError
 
-# This import is here so that Celery will find our application instance
+# This import is here so that Celery will find our application instance. It's important that other
+# pulp and django code not get used until after the celery app is instantiated and does its "fixup"
+# of django.
 from pulp.tasking.celery_instance import celery  # noqa
 
 celery.autodiscover_tasks()
@@ -23,7 +25,7 @@ celery.autodiscover_tasks()
 _logger = logging.getLogger(__name__)
 
 
-@signals.celeryd_after_setup.connect
+@celeryd_after_setup.connect
 def initialize_worker(sender, instance, **kwargs):
     """
     This function performs all the necessary initialization of the Celery worker.
