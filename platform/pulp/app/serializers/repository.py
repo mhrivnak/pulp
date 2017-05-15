@@ -39,16 +39,12 @@ class RepositorySerializer(ModelSerializer):
     scratchpad = ScratchpadKeyValueRelatedField()
     importers = ImporterRelatedField(many=True)
     publishers = PublisherRelatedField(many=True)
-    content = serializers.HyperlinkedIdentityField(
-        view_name='repositories-content',
-        lookup_field='name'
-    )
 
     class Meta:
         model = models.Repository
         fields = ModelSerializer.Meta.fields + ('name', 'description', 'notes', 'scratchpad',
                                                 'last_content_added', 'last_content_removed',
-                                                'importers', 'publishers', 'content')
+                                                'importers', 'publishers')
 
 
 class ImporterSerializer(MasterModelSerializer):
@@ -174,11 +170,39 @@ class PublisherSerializer(MasterModelSerializer):
 
 
 class RepositoryContentSerializer(serializers.ModelSerializer):
-    # RepositoryContentSerizlizer should not have it's own _href, so it subclasses
+    # RepositoryContentSerializer should not have it's own _href, so it subclasses
     # rest_framework.serializers.ModelSerializer instead of pulp.app.serializers.ModelSerializer
     content = ContentRelatedField()
     repository = RepositoryRelatedField()
+    vadded = serializers.HyperlinkedRelatedField(view_name='repositoryversions-detail',
+                                                 read_only=True)
+    vremoved = serializers.HyperlinkedRelatedField(view_name='repositoryversions-detail',
+                                                   read_only=True)
 
     class Meta:
         model = models.RepositoryContent
-        fields = ('repository', 'content')
+        fields = ('repository', 'content', 'vadded', 'vremoved')
+
+
+class RepositoryVersionSerializer(ModelSerializer):
+    _href = serializers.HyperlinkedIdentityField(
+        view_name='repositoryversions-detail',
+    )
+    repository = RepositoryRelatedField()
+    num = serializers.IntegerField(
+        read_only=True
+    )
+    created = serializers.DateTimeField(
+        help_text=_('Timestamp of creation.'),
+        read_only=True
+    )
+    action = serializers.ChoiceField(
+        help_text=_('The action that created this version.'),
+        allow_blank=False,
+        choices=models.RepositoryVersion.ACTIONS,
+        read_only=True
+    )
+
+    class Meta:
+        model = models.RepositoryVersion
+        fields = ('_href', 'repository', 'num', 'created', 'action')

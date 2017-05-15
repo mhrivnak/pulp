@@ -3,11 +3,12 @@ from django_filters import CharFilter
 from rest_framework import decorators
 
 from pulp.app import tasks
-from pulp.app.models import Importer, Publisher, Repository, RepositoryContent
+from pulp.app.models import Importer, Publisher, Repository, RepositoryContent, RepositoryVersion
 from pulp.app.pagination import UUIDPagination, NamePagination
 from pulp.app.response import OperationPostponedResponse
 from pulp.app.serializers import (ContentSerializer, ImporterSerializer, PublisherSerializer,
-                                  RepositorySerializer, RepositoryContentSerializer)
+                                  RepositorySerializer, RepositoryContentSerializer,
+                                  RepositoryVersionSerializer)
 from pulp.app.viewsets import NamedModelViewSet
 from pulp.app.viewsets.custom_filters import CharInFilter
 from pulp.common import tags
@@ -29,14 +30,6 @@ class RepositoryViewSet(NamedModelViewSet):
     endpoint_name = 'repositories'
     pagination_class = NamePagination
     filter_class = RepositoryFilter
-
-    @decorators.detail_route()
-    def content(self, request, name):
-        repo = self.get_object()
-        paginator = UUIDPagination()
-        page = paginator.paginate_queryset(repo.content, request)
-        serializer = ContentSerializer(page, many=True, context={'request': request})
-        return paginator.get_paginated_response(serializer.data)
 
     @decorators.detail_route()
     def importers(self, request, name):
@@ -155,3 +148,25 @@ class RepositoryContentViewSet(NamedModelViewSet):
     endpoint_name = 'repositorycontents'
     queryset = RepositoryContent.objects.all()
     serializer_class = RepositoryContentSerializer
+
+
+class RepositoryVersionFilter(filterset.FilterSet):
+    """
+    I think most or all of this can be adapted to be generically useful
+    for filtering on the natural key of a Pulp model.
+    """
+    repository = filters.Filter(name='repository', method='filter_repo')
+
+    def filter_repo(self, queryset, name, value):
+        return queryset.filter(repository__name=value)
+
+    class Meta:
+        model = RepositoryVersion
+        fields = ['repository']
+
+
+class RepositoryVersionViewSet(NamedModelViewSet):
+    filter_class = RepositoryVersionFilter
+    endpoint_name = 'repositoryversions'
+    queryset = RepositoryVersion.objects.all()
+    serializer_class = RepositoryVersionSerializer
