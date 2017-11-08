@@ -7,7 +7,8 @@ from threading import current_thread
 
 from .single import Context
 
-
+# The maximum number of downloads to have in the pipeline.
+BACKLOG = 1024
 # The default number of downloads to be executed concurrently.
 CONCURRENT = 4
 
@@ -24,7 +25,6 @@ class Batch:
         concurrent (int): The number of downloads to be executed concurrently.
         iterator (PlanIterator): Used to iterate downloads as they complete.
         context (SharedContext): A shared download context.
-        outstanding (int): Total number of queued downloads.
 
     Examples:
 
@@ -59,7 +59,6 @@ class Batch:
         self.iterator = PlanIterator(self)
         self.executor = ThreadPoolExecutor(max_workers=concurrent)
         self.context = context or Context()
-        self.outstanding = 0
 
     def submit(self, plan):
         """
@@ -72,7 +71,8 @@ class Batch:
         download.context = self.context
         future = self.executor.submit(plan)
         future.add_done_callback(self.iterator.add)
-        self.outstanding += 1
+        future.add_done_callback(self.completed)
+        self.iterator.outstanding += 1
 
     def completed(self, plan):
         """
@@ -81,7 +81,6 @@ class Batch:
         Args:
             plan (Plan): The completed plan.
         """
-        self.outstanding -= 1
         for download in self.downloads:
             plan = Plan(download)
             self.submit(plan)
@@ -96,10 +95,10 @@ class Batch:
                 The iterator will yield the download `Plan` in the order completed.
         """
         log.debug(_('%(batch)s - download started'), {'batch': self})
-        for download in self.downloads:
+        for i, download in enumerate(self.downloads):
             plan = Plan(download)
             self.submit(plan)
-            if self.outstanding == (self.concurrent + 1):
+            if i > BACKLOG:
                 break
         return self.iterator
 
@@ -126,7 +125,7 @@ class Batch:
             'Batch: id={s} concurrent={c} outstanding={o}').format(
                 s=_id,
                 c=self.concurrent,
-                o=self.outstanding)
+                o=self.iterator.outstanding)
 
 
 class PlanIterator(Iterator):
@@ -134,18 +133,16 @@ class PlanIterator(Iterator):
     Batched download plan iterator.
 
     Attributes:
-        batch (Batch): The batch.
-        queue (Queue): The input queue to be iterated.
+        queue (Queue): The queue of completed work to be iterated.
+        outstanding (int): Total number of downloads in the workflow.
     """
 
-    def __init__(self, batch):
+    def __init__(self):
         """
-        Args:
-            batch (Batch): The batch.
         """
         super().__init__()
-        self.batch = batch
         self.queue = Queue()
+        self.outstanding = 0
 
     def add(self, future):
         """
@@ -172,7 +169,7 @@ class PlanIterator(Iterator):
         Raises:
             StopIteration: when finished iterating.
         """
-        if not self.batch.outstanding:
+        if self.outstanding <= 0:
             raise StopIteration()
 
         log.debug(_('%(iterator)s - next'), {'iterator': self})
@@ -190,7 +187,7 @@ class PlanIterator(Iterator):
                 })
             raise
         else:
-            self.batch.completed(plan)
+            self.outstanding -= 1
             return plan
 
     def __iter__(self):
